@@ -5,13 +5,14 @@ from docx import Document
 from typing import List, Dict
 import io
 import re
+from ai_service import get_ai_analysis  # Import the new AI service
 
 app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3002", "http://localhost:3003"],
+    allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -139,7 +140,6 @@ async def analyze_resume(file: UploadFile = File(...)):
     try:
         content = await file.read()
         
-        # Extract text based on file type
         if file.filename.endswith('.pdf'):
             text = extract_text_from_pdf(content)
         elif file.filename.endswith('.docx'):
@@ -149,17 +149,10 @@ async def analyze_resume(file: UploadFile = File(...)):
         else:
             raise HTTPException(status_code=400, detail="Unsupported file format")
         
-        # Identify sections
-        sections = identify_sections(text)
+        # Get analysis from the AI service
+        analysis_result = get_ai_analysis(text)
         
-        # Calculate final score and generate feedback
-        score, section_feedback, suggestions = calculate_score(sections, text)
-
-        return {
-            "score": score,
-            "suggestions": suggestions,
-            "sectionFeedback": section_feedback
-        }
+        return analysis_result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
